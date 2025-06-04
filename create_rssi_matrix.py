@@ -294,7 +294,7 @@ def get_rssi_matrix(csv_file_path=None):
             - room_map: Dictionary mapping room numbers to (row, col) positions
     """
     if csv_file_path is None:
-        csv_file_path = '/home/who/Téléchargements/RSSI/RSSI.csv'
+        csv_file_path = 'data/RSSI.csv'
     
     # Read the data
     df, router_cols = read_rssi_data(csv_file_path)
@@ -401,8 +401,8 @@ def demonstrate_array_usage(matrix, router_cols, room_map):
 
 # Main function
 def main():
-    input_file = '/home/who/Téléchargements/RSSI/RSSI.csv'
-    output_dir = '/home/who/Téléchargements/RSSI'
+    input_file = 'data/RSSI.csv'
+    output_dir = 'data/output'
     
     print("Analyzing RSSI data...")
     matrix, router_cols, room_map, _, _ = analyze_rssi_data(
