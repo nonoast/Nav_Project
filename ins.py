@@ -1,22 +1,31 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-csv_file = "forward.csv"
+# Load data from CSV file
+csv_file = "data/trajet_rouge.csv"
+df = pd.read_csv(csv_file, sep=';', skiprows=1)
 
-df = pd.read_csv(csv_file, skiprows=1)
-
-
-time = df.iloc[:, 0].values  # temps en secondes
-ax = df.iloc[:, 1].values    # accélération en X
-ay = df.iloc[:, 2].values    # accélération en Yacceleration
-
+# Extract sensor data
+time = df.iloc[:, 0].values  # time in milliseconds
+# Accelerometer data (m/s²)
+ax = df.iloc[:, 1].values
+ay = df.iloc[:, 2].values
+az = df.iloc[:, 3].values
+# Gyroscope data (rad/s)
+gx = df.iloc[:, 4].values
+gy = df.iloc[:, 5].values
+gz = df.iloc[:, 6].values
+# Magnetometer data (μT)
+mx = df.iloc[:, 7].values
+my = df.iloc[:, 8].values
+mz = df.iloc[:, 9].values
 # Initialisation
 vx, vy = [0], [0]
 x, y = [0], [0]
 
 # Intégration simple (Euler)
 for i in range(1, len(time)):
-    dt = time[i] - time[i - 1]
+    dt = (time[i] - time[i - 1]) / 1000.0  # Convert milliseconds to seconds
 
     # Vitesse
     vx.append(vx[-1] + ax[i] * dt)
