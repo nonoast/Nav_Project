@@ -4,7 +4,7 @@ import numpy as np  # Add NumPy import for mathematical functions
 from scipy.signal import find_peaks, butter, filtfilt
 import matplotlib.pyplot as plt
 # Load data from CSV file
-csv_file = "data/trajet_vert.csv"
+csv_file = "data/trajet_rouge.csv"
 df = pd.read_csv(csv_file, sep=';', skiprows=1)
 
 # Extract sensor data
@@ -24,7 +24,7 @@ mz = df.iloc[:, 9].values
 
 
 # Fonction de filtrage Butterworth passe-bas
-def butter_lowpass_filter(data, cutoff, fs, order=2):
+def butter_lowpass_filter(data, cutoff, fs, order=4):
     nyq = 0.5 * fs  # Fréquence de Nyquist
     normal_cutoff = cutoff / nyq
     # Conception du filtre
@@ -48,7 +48,7 @@ theta = [0]  # Initial heading angle (in radians)
 
 # Intégration simple (Euler)
 for i in range(1, len(time)):
-    dt = (time[i] - time[i - 1]) / 1000.0  # Convert milliseconds to seconds
+    dt = (time[i] - time[i - 1]) / 10000.0  # Convert milliseconds to seconds
     
     # Update orientation (integrate gyroscope data)
     # Using gz for heading in 2D plane (assuming device is roughly horizontal)
