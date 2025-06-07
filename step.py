@@ -4,7 +4,7 @@ from scipy.signal import find_peaks, butter, filtfilt
 import matplotlib.pyplot as plt
 
 # Load data from CSV file
-csv_file = "data/trajet_vert.csv"
+csv_file = "data/trajet_rouge.csv"
 df = pd.read_csv(csv_file, sep=';', skiprows=1)
 
 # Extract sensor data
@@ -32,6 +32,7 @@ print(filtered_mag[:10])  # Print the first 10 values
 lower_threshold = 0.8 * 9.81  # Example: 0.03g in m/s^2
 upper_threshold = 1.15* 9.81   # Example: 1.5g in m/s^2
 epsilon = 5 # Small value to avoid division by zero
+
 peaks_high, _ = find_peaks(filtered_mag, height=(upper_threshold, upper_threshold+epsilon), distance=20)
 peaks_low, _ = find_peaks(filtered_mag, height=(lower_threshold-epsilon, lower_threshold), distance=20)
 step_count = len(peaks_high)

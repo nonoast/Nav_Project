@@ -219,12 +219,20 @@ def create_router_heatmaps(matrix, router_cols, room_map, show=True, save_path=N
 
 # Create a combined heatmap showing the best router for each location
 def create_best_router_heatmap(matrix, router_cols, room_map, show=True, save_path=None):
-    # Find the router with the strongest signal at each position
-    # (less negative RSSI value is stronger signal)
-    best_router = np.nanargmax(matrix, axis=2)
-    
     # Create a mask for positions without data
     all_nan_mask = np.all(np.isnan(matrix), axis=2)
+    
+    # Initialize a best router array filled with -1 (no router)
+    best_router = np.full((matrix.shape[0], matrix.shape[1]), -1)
+    
+    # Find the router with the strongest signal at each position
+    # (less negative RSSI value is stronger signal)
+    for row in range(matrix.shape[0]):
+        for col in range(matrix.shape[1]):
+            # Skip positions with all NaN values
+            if not all_nan_mask[row, col]:
+                # Get the index of strongest signal (max value) for this position
+                best_router[row, col] = np.nanargmax(matrix[row, col, :])
     
     # Create the figure
     fig, ax = plt.subplots(figsize=(15, 8))
@@ -233,7 +241,7 @@ def create_best_router_heatmap(matrix, router_cols, room_map, show=True, save_pa
     cmap = plt.cm.get_cmap('tab10', len(router_cols))
     
     # Create the heatmap for best router
-    masked_best_router = np.ma.masked_where(all_nan_mask, best_router)
+    masked_best_router = np.ma.masked_array(best_router, mask=(best_router < 0))
     sns.heatmap(masked_best_router, 
                ax=ax, 
                cmap=cmap,
@@ -278,6 +286,66 @@ def create_best_router_heatmap(matrix, router_cols, room_map, show=True, save_pa
         plt.close(fig)
     
     return fig
+
+# Function to locate a position based on RSSI measurements
+def locate_position(rssi_vector, matrix, router_cols, room_map):
+    """
+    Determine the most likely position based on RSSI measurements.
+    
+    Args:
+        rssi_vector: List or array of RSSI values, one for each router in the same
+                    order as router_cols (can include np.nan for missing readings)
+        matrix: The reference RSSI matrix
+        router_cols: List of router column names
+        room_map: Dictionary mapping room numbers to (row, col) positions
+    
+    Returns:
+        tuple: ((row, col), room_number, distance)
+            - (row, col): The estimated position in the matrix
+            - room_number: The room number corresponding to this position
+            - distance: The Euclidean distance to the closest match
+    """
+    # Convert input to numpy array if it's not already
+    rssi_array = np.array(rssi_vector)
+    
+    # Create inverse room map (position to room number)
+    pos_to_room = {(row, col): room for room, (row, col) in room_map.items()}
+    
+    best_distance = float('inf')
+    best_position = None
+    
+    # Iterate through all valid positions in the matrix
+    for row in range(matrix.shape[0]):
+        for col in range(matrix.shape[1]):
+            # Check if this position has data and is a valid room
+            if (row, col) in pos_to_room:
+                cell_values = matrix[row, col, :]
+                
+                # Skip positions with no data
+                if np.all(np.isnan(cell_values)):
+                    continue
+                
+                # Calculate distance, considering only positions where both have data
+                valid_indices = ~np.isnan(cell_values) & ~np.isnan(rssi_array)
+                
+                # Skip if we don't have enough common measurements
+                if np.sum(valid_indices) < 2:  # Need at least 2 common measurements
+                    continue
+                
+                # Calculate Euclidean distance for valid indices
+                distance = np.sqrt(np.sum((cell_values[valid_indices] - rssi_array[valid_indices])**2))
+                
+                if distance < best_distance:
+                    best_distance = distance
+                    best_position = (row, col)
+    
+    if best_position is None:
+        return None, None, None
+    
+    # Get the room number from the position
+    room_number = pos_to_room[best_position]
+    
+    return best_position, room_number, best_distance
 
 # Function to get the matrix directly in Python without saving to file
 def get_rssi_matrix(csv_file_path=None):
@@ -398,6 +466,49 @@ def demonstrate_array_usage(matrix, router_cols, room_map):
         
         if not np.any(room_signals > -75):  # -75 dBm threshold for poor signal
             print(f"  Room {room}: Poor coverage (all signals below -75 dBm)")
+    
+    # Example 5: Demonstrate position location
+    print("\n5. Position location demonstration:")
+    # Let's pretend we have a measurement from somewhere
+    # We'll just take an existing position from the matrix and add some noise
+    
+    # Choose a random position that has data
+    valid_positions = []
+    for room, (row, col) in room_map.items():
+        if not np.all(np.isnan(matrix[row, col, :])):
+            valid_positions.append((row, col, room))
+    
+    if valid_positions:
+        # Pick a random position
+        import random
+        row, col, actual_room = random.choice(valid_positions)
+        
+        print(f"  Selected room {actual_room} at position ({row}, {col}) for testing")
+        
+        # Get RSSI values and add some noise
+        original_values = matrix[row, col, :].copy()
+        noisy_values = original_values.copy()
+        
+        # Add some random noise (-3 to +3 dB)
+        for i in range(len(noisy_values)):
+            if not np.isnan(noisy_values[i]):
+                noisy_values[i] += random.uniform(-3, 3)
+        
+        print("  Original RSSI values:", original_values)
+        print("  Noisy measurements  :", noisy_values)
+        
+        # Try to locate the position
+        estimated_pos, estimated_room, distance = locate_position(
+            noisy_values, matrix, router_cols, room_map)
+        
+        print(f"  ESTIMATED POSITION: Room {estimated_room} at {estimated_pos}")
+        print(f"  ACTUAL POSITION: Room {actual_room} at ({row}, {col})")
+        print(f"  Distance metric: {distance:.2f}")
+        
+        if estimated_room == actual_room:
+            print("  SUCCESS! Room correctly identified.")
+        else:
+            print("  Room identification was incorrect.")
 
 # Main function
 def main():
@@ -413,6 +524,35 @@ def main():
     
     # Show examples of working with the array directly
     demonstrate_array_usage(matrix, router_cols, room_map)
+    
+    # Interactive test of position location
+    print("\nWould you like to test position location with custom RSSI values? (y/n)")
+    response = input().strip().lower()
+    
+    if response == 'y':
+        rssi_values = []
+        print(f"Enter RSSI values for {len(router_cols)} routers (or 'nan' for no reading):")
+        for i, router in enumerate(router_cols):
+            while True:
+                try:
+                    value_str = input(f"  Router {router}: ").strip().lower()
+                    if value_str == 'nan':
+                        rssi_values.append(np.nan)
+                        break
+                    value = float(value_str)
+                    rssi_values.append(value)
+                    break
+                except ValueError:
+                    print("  Please enter a valid number or 'nan'")
+        
+        estimated_pos, estimated_room, distance = locate_position(
+            rssi_values, matrix, router_cols, room_map)
+        
+        if estimated_pos is None:
+            print("Could not determine position with the given RSSI values.")
+        else:
+            print(f"\nEstimated position: Room {estimated_room} at matrix position {estimated_pos}")
+            print(f"Confidence metric (lower is better): {distance:.2f}")
     
     # Return the matrix for interactive use
     print("\nMatrix is available for interactive use")
