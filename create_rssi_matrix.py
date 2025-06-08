@@ -428,23 +428,6 @@ def demonstrate_array_usage(matrix, router_cols, room_map):
     """Show examples of working with the RSSI data as NumPy arrays"""
     
     print("\n===== Array Usage Examples =====")
-    
-    # Example 1: Find average signal strength for each router
-    print("\n1. Average signal strength by router:")
-    for i, router in enumerate(router_cols):
-        avg_signal = np.nanmean(matrix[:,:,i])
-        print(f"  Router {router}: {avg_signal:.2f} dBm")
-    
-    # Example 2: Find the strongest signal for each room
-    print("\n2. Strongest signal by room:")
-    for room, (row, col) in list(room_map.items())[:5]:  # Show first 5 rooms only
-        room_signals = matrix[row, col, :]
-        if not np.all(np.isnan(room_signals)):
-            max_idx = np.nanargmax(room_signals)
-            max_signal = np.nanmax(room_signals)
-            print(f"  Room {room}: Best router is {router_cols[max_idx]} with signal {max_signal:.1f} dBm")
-    print("  ...and more rooms")
-    
     # Example 3: Create a matrix mask for good signal strength
     print("\n3. Good signal coverage matrix (signals stronger than -65 dBm):")
     good_signal_threshold = -65
@@ -455,17 +438,6 @@ def demonstrate_array_usage(matrix, router_cols, room_map):
     for i, router in enumerate(router_cols):
         good_count = np.sum(good_signal_mask[:,:,i])
         print(f"  Router {router}: {good_count} locations with good signal")
-    
-    # Example 4: Find rooms with no coverage
-    print("\n4. Rooms with poor or no coverage:")
-    for room, (row, col) in room_map.items():
-        room_signals = matrix[row, col, :]
-        if np.all(np.isnan(room_signals)):
-            print(f"  Room {room}: No coverage")
-            continue
-        
-        if not np.any(room_signals > -75):  # -75 dBm threshold for poor signal
-            print(f"  Room {room}: Poor coverage (all signals below -75 dBm)")
     
     # Example 5: Demonstrate position location
     print("\n5. Position location demonstration:")
