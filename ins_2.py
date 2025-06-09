@@ -5,7 +5,7 @@ from scipy.signal import butter, filtfilt
 import math
 
 # Load data from CSV file
-csv_file = "data/trajet_rouge.csv"
+csv_file = "data/trajet_vert.csv"
 df = pd.read_csv(csv_file, sep=';', skiprows=1)
 
 # Extract sensor data
